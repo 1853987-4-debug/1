@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iPhone Simulator</title>
+<style>
+/* ===================== Base Reset ===================== */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+button { font-family: inherit; border: none; background: none; color: inherit; cursor: pointer; }
+input { font-family: inherit; outline: none; border: none; }
+
+:root {
+  --sf: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --sf-cn: var(--sf), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 20%, #2b2b3a 0%, #0d0d12 60%);
+  font-family: var(--sf-cn);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ===================== Phone Case ===================== */
+.phone {
+  width: 393px;
+  height: 852px;
+  background: #08080a;
+  border-radius: 56px;
+  padding: 11px;
+  position: relative;
+  box-shadow: 0 0 0 2px #33333a, 0 0 0 4px #0a0a0c, 0 40px 90px rgba(0,0,0,.75), inset 0 0 0 1px #4a4a52;
+}
+
+/* Side Buttons */
+.side-btn { position: absolute; background: #2c2c32; border-radius: 3px; }
+.side-btn.vol-up   { left: -3px; top: 178px; width: 4px; height: 58px; border-radius: 3px 0 0 3px; }
+.side-btn.vol-down { left: -3px; top: 252px; width: 4px; height: 58px; border-radius: 3px 0 0 3px; }
+.side-btn.power    { right: -3px; top: 210px; width: 4px; height: 90px; border-radius: 0 3px 3px 0; cursor: pointer; }
+.side-btn.power:active { background: #55555c; }
+
+.screen {
+  width: 100%; height: 100%; border-radius: 46px; overflow: hidden; position: relative; background: #000; isolation: isolate;
+}
+
+/* ===================== Wallpaper ===================== */
+.wallpaper { position: absolute; inset: 0; z-index: 0; background: linear-gradient(160deg, #1a1a2e 0%, #16213e 45%, #0f3460 100%); transition: background .6s ease; }
+
+/* ===================== Status Bar ===================== */
+.status-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 30px; z-index: 50; color: #fff; font-size: 15px; font-weight: 600; letter-spacing: .3px; pointer-events: none;
+}
+.status-icons { display: flex; align-items: center; gap: 6px; }
+.battery { width: 26px; height: 13px; border: 1.5px solid rgba(255,255,255,.45); border-radius: 4px; padding: 1.5px; position: relative; }
+.battery::after { content: ''; position: absolute; right: -4px; top: 3.5px; width: 2px; height: 4px; background: rgba(255,255,255,.45); border-radius: 0 2px 2px 0; }
+.battery-level { height: 100%; width: 82%; background: #fff; border-radius: 1.5px; }
+
+/* ===================== Dynamic Island ===================== */
+.dynamic-island {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 122px; height: 34px; background: #000; border-radius: 20px;
+  z-index: 60; display: flex; align-items: center; justify-content: center; overflow: hidden; color: #fff; font-size: 12.5px; font-weight: 500;
+  white-space: nowrap; transition: width .42s cubic-bezier(.2,.8,.2,1), height .42s, border-radius .42s;
+}
+.dynamic-island span { opacity: 0; transition: opacity .18s; }
+.dynamic-island.show { width: 250px; height: 44px; border-radius: 22px; }
+.dynamic-island.show span { opacity: 1; }
+
+/* ===================== Lock Screen ===================== */
+.lock-screen {
+  position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; padding-top: 92px; color: #fff;
+  background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  transition: transform .55s cubic-bezier(.32,.72,0,1), opacity .45s;
+}
+.lock-screen.unlocked { transform: translateY(-105%); opacity: 0; pointer-events: none; }
+.lock-date { font-size: 20px; font-weight: 500; opacity: .92; }
+.lock-time { font-size: 88px; font-weight: 500; line-height: 1.02; letter-spacing: -3px; margin-top: -2px; font-variant-numeric: tabular-nums; }
+.lock-widgets { display: flex; gap: 12px; margin-top: 26px; }
+.lock-widget { display: flex; align-items: center; gap: 9px; padding: 11px 16px; border-radius: 20px; background: rgba(255,255,255,.14); backdrop-filter: blur(18px); font-size: 13px; }
+.lock-widget b { font-size: 16px; display: block; }
+.lock-widget span { opacity: .7; font-size: 11px; }
+.unlock-hint { margin-top: auto; margin-bottom: 44px; text-align: center; font-size: 13px; opacity: .8; animation: float 2.2s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); opacity: .65; } 50% { transform: translateY(-7px); opacity: 1; } }
+
+/* ===================== Home Screen ===================== */
+.home-screen { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; padding-top: 62px; transition: transform .35s, opacity .3s; }
+.home-screen.hidden { transform: scale(.94); opacity: 0; pointer-events: none; }
+.app-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px 10px; padding: 0 22px; }
+.app-item { display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; }
+.app-icon { width: 60px; height: 60px; border-radius: 15px; display: grid; place-items: center; font-size: 30px; box-shadow: 0 5px 14px rgba(0,0,0,.3); transition: transform .16s; }
+.app-item:active .app-icon { transform: scale(.88); }
+.app-label { font-size: 11.5px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.page-dots { display: flex; gap: 7px; justify-content: center; margin-top: auto; margin-bottom: 16px; }
+.page-dots span { width: 6.5px; height: 6.5px; border-radius: 50%; background: rgba(255,255,255,.35); }
+.page-dots span.active { background: #fff; }
+.dock { margin: 0 12px 26px; height: 90px; border-radius: 34px; background: rgba(255,255,255,.16); backdrop-filter: blur(24px); display: flex; align-items: center; justify-content: space-around; padding: 0 14px; border: 1px solid rgba(255,255,255,.12); }
+
+/* ===================== App Views ===================== */
+.app-view {
+  position: absolute; inset: 0; z-index: 20; padding: 64px 20px 40px; color: #fff; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .4s cubic-bezier(.32,.72,0,1); overflow-y: auto; overflow-x: hidden;
+}
+.app-view.active { transform: translateX(0); }
+.app-view::-webkit-scrollbar { display: none; }
+.app-header { font-size: 32px; font-weight: 700; letter-spacing: -.6px; margin-bottom: 18px; }
+
+/* ===================== Calculator ===================== */
+.calc-app { background: #000; padding: 64px 16px 34px; }
+.calc-display { flex: 1; display: flex; align-items: flex-end; justify-content: flex-end; padding: 0 12px 22px; overflow: hidden; }
+#calcResult { font-size: 72px; font-weight: 300; line-height: 1; letter-spacing: -2px; font-variant-numeric: tabular-nums; white-space: nowrap; transition: font-size .15s; }
+.calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ck { aspect-ratio: 1; border-radius: 50%; font-size: 30px; background: #333; color: #fff; display: grid; place-items: center; transition: filter .12s, transform .08s; }
+.ck:active { filter: brightness(1.6); transform: scale(.95); }
+.ck.fn { background: #a5a5a5; color: #000; font-weight: 500; }
+.ck.op { background: #ff9f0a; font-size: 34px; }
+.ck.zero { grid-column: span 2; aspect-ratio: auto; border-radius: 40px; justify-content: flex-start; padding-left: 31px; }
+
+/* ===================== Clock ===================== */
+.clock-app { background: #000; align-items: center; }
+.clock-app .app-header { align-self: flex-start; }
+.clock-now { font-size: 62px; font-weight: 200; font-variant-numeric: tabular-nums; letter-spacing: -2px; margin: 10px 0 46px; color: #ff9f0a; }
+.sw-time { font-size: 68px; font-weight: 200; font-variant-numeric: tabular-nums; letter-spacing: -2px; margin-bottom: 34px; }
+.sw-buttons { display: flex; gap: 22px; }
+.sw-btn { width: 92px; height: 92px; border-radius: 50%; font-size: 17px; font-weight: 500; background: #2c2c2e; }
+.sw-btn:active { filter: brightness(1.4); transform: scale(.95); }
+.sw-btn.green { background: #0d3b22; color: #30d158; }
+.sw-btn.red { background: #3b0d0d; color: #ff453a; }
+
+/* ===================== Weather ===================== */
+.weather-app { background: linear-gradient(170deg, #2f6fb5 0%, #1e4d8c 45%, #102a4c 100%); padding-top: 70px; }
+.w-header { text-align: center; margin-bottom: 26px; }
+.w-city { font-size: 32px; font-weight: 500; }
+.w-temp { font-size: 92px; font-weight: 200; line-height: 1; letter-spacing: -4px; }
+.w-desc { font-size: 17px; opacity: .85; }
+.w-card { background: rgba(255,255,255,.15); backdrop-filter: blur(18px); border-radius: 18px; padding: 14px 16px; margin-bottom: 14px; }
+.w-card-title { font-size: 11.5px; opacity: .7; letter-spacing: .8px; text-transform: uppercase; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.15); margin-bottom: 10px; }
+.w-hourly { display: flex; justify-content: space-between; }
+.w-hour { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 14px; }
+.w-hour .h-emo { font-size: 20px; }
+.w-day { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 15px; }
+.w-day .d-name { width: 46px; font-weight: 500; }
+.w-day .d-bar { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,.2); overflow: hidden; }
+.w-day .d-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6fd6ff, #ffd166); }
+
+/* ===================== Notes ===================== */
+.notes-app { background: #141416; }
+.note-input { display: flex; gap: 10px; margin-bottom: 18px; }
+.note-input input { flex: 1; height: 44px; border-radius: 12px; padding: 0 14px; font-size: 15px; background: #2c2c2e; color: #fff; user-select: text; }
+.note-input button { height: 44px; padding: 0 20px; border-radius: 12px; background: #ffd60a; color: #000; font-size: 15px; font-weight: 600; }
+.notes-list { display: flex; flex-direction: column; gap: 10px; }
+.note-item { background: #2c2c2e; border-radius: 14px; padding: 14px 16px; font-size: 15px; display: flex; gap: 12px; align-items: flex-start; }
+.note-item .n-text { flex: 1; word-break: break-word; }
+.note-item .n-del { color: #ff453a; font-size: 17px; }
+
+/* ===================== Music ===================== */
+.music-app { background: linear-gradient(170deg, #3a1c3d 0%, #1b1024 55%, #0a0a0f 100%); align-items: center; justify-content: center; }
+.music-art { width: 230px; height: 230px; border-radius: 22px; background: linear-gradient(135deg, #ff5f6d, #ffc371, #7b2ff7); display: grid; place-items: center; font-size: 82px; margin-bottom: 30px; }
+.music-title { font-size: 22px; font-weight: 600; }
+.music-artist { font-size: 15px; opacity: .6; margin-top: 5px; }
+.music-progress { width: 100%; height: 5px; border-radius: 3px; background: rgba(255,255,255,.18); margin-top: 32px; overflow: hidden; }
+#musicBar { height: 100%; width: 0%; background: #fff; }
+.music-times { width: 100%; display: flex; justify-content: space-between; font-size: 11.5px; opacity: .55; margin-top: 8px; }
+.music-controls { display: flex; align-items: center; gap: 34px; margin-top: 26px; }
+.music-controls button { font-size: 28px; }
+.music-controls #musicPlay { width: 66px; height: 66px; border-radius: 50%; background: rgba(255,255,255,.14); display: grid; place-items: center; font-size: 26px; }
+
+/* ===================== Photos ===================== */
+.photos-app { background: #000; }
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.photo-grid div { aspect-ratio: 1; border-radius: 6px; }
+
+/* ===================== Settings ===================== */
+.settings-app { background: #141416; }
+.settings-group { background: #2c2c2e; border-radius: 14px; overflow: hidden; margin-bottom: 22px; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 16px; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,.07); cursor: pointer; }
+.setting-row:last-child { border-bottom: none; }
+.setting-row .chev { opacity: .35; font-size: 19px; }
+.switch { width: 51px; height: 31px; border-radius: 16px; background: #39393d; position: relative; transition: background .25s; flex-shrink: 0; }
+.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; transition: transform .25s; }
+.switch.on { background: #30d158; }
+.switch.on::after { transform: translateX(20px); }
+
+/* ===================== Phone App ===================== */
+.phone-app { background: #141416; }
+.phone-card { background: #2c2c2e; border-radius: 16px; padding: 24px; text-align: center; margin-top: 20px; }
+.phone-card .p-num { font-size: 32px; font-weight: 600; letter-spacing: 2px; color: #fff; margin-bottom: 12px; }
+.phone-card .p-btn { margin-top: 20px; padding: 10px 20px; border-radius: 10px; background: #0a84ff; color: #fff; font-size: 15px; }
+
+/* ===================== WeChat App ===================== */
+.wechat-app { background: #141416; padding-bottom: 0; position: relative; }
+
+/* Registration */
+.reg-container { display: flex; flex-direction: column; gap: 16px; margin-top: 40px; align-items: center; }
+.reg-container input { width: 100%; height: 50px; border-radius: 12px; background: #2c2c2e; color: #fff; padding: 0 16px; font-size: 18px; text-align: center; letter-spacing: 2px; }
+.reg-container button { width: 100%; height: 50px; border-radius: 12px; background: #07c160; color: #fff; font-size: 16px; font-weight: 600; }
+.reg-hint { font-size: 13px; color: #8e8e93; text-align: center; margin-top: 20px; line-height: 1.5; }
+
+/* Chat List Header */
+.chat-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; height: 20px; }
+.chat-list-header button { color: #07c160; font-size: 15px; }
+.chat-list-header .acc-info { font-size: 13px; color: #8e8e93; }
+
+/* New Friends Section */
+.new-friends-btn { background: #2c2c2e; border-radius: 14px; padding: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.new-friends-btn:active { background: #3a3a3c; }
+.nf-left { display: flex; align-items: center; gap: 14px; }
+.nf-icon { width: 44px; height: 44px; border-radius: 50%; background: #ff9f0a; display: grid; place-items: center; font-size: 20px; }
+.nf-title { font-size: 16px; font-weight: 500; }
+.nf-badge { background: #ff3b30; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+/* Add Friend Bar */
+.add-friend-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+.add-friend-bar input { flex: 1; height: 40px; border-radius: 10px; background: #2c2c2e; color: #fff; padding: 0 12px; font-size: 14px; }
+.add-friend-bar button { height: 40px; padding: 0 16px; border-radius: 10px; background: #07c160; color: #fff; font-size: 14px; }
+
+/* Chat List */
+.chat-items { display: flex; flex-direction: column; gap: 12px; }
+.chat-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: #2c2c2e; border-radius: 14px; }
+.chat-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #07c160, #059c4c); display: grid; place-items: center; font-size: 20px; color: #fff; flex-shrink: 0; }
+.chat-info { flex: 1; cursor: pointer; overflow: hidden; }
+.chat-name { font-size: 16px; font-weight: 500; }
+.chat-preview { font-size: 13px; color: #8e8e93; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.delete-friend-btn { color: #ff3b30; font-size: 20px; padding: 10px; cursor: pointer; display: grid; place-items: center; }
+
+/* Pending Requests Screen */
+.requests-screen { position: absolute; inset: 0; background: #141416; z-index: 5; display: flex; flex-direction: column; padding: 64px 20px 40px; transform: translateX(100%); transition: transform .3s; }
+.requests-screen.active { transform: translateX(0); }
+.req-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.req-header button { color: #07c160; font-size: 24px; }
+.req-item { background: #2c2c2e; border-radius: 14px; padding: 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.req-info { display: flex; align-items: center; gap: 12px; }
+.req-avatar { width: 40px; height: 40px; border-radius: 50%; background: #ff9f0a; display: grid; place-items: center; font-size: 18px; }
+.req-name { font-size: 15px; font-weight: 500; }
+.req-actions { display: flex; gap: 8px; }
+.req-actions button { padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+.btn-accept { background: #07c160; color: #fff; }
+.btn-decline { background: #3a3a3c; color: #ff3b30; }
+
+/* Chat Room */
+.chat-room { position: absolute; inset: 0; background: #000; z-index: 10; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .3s; }
+.chat-room.active { transform: translateX(0); }
+.chat-room-header { height: 60px; display: flex; align-items: center; padding: 0 16px; background: #1c1c1e; border-bottom: 1px solid #2c2c2e; gap: 12px; }
+.chat-room-header button { color: #07c160; font-size: 22px; }
+.chat-room-header .cr-name { font-size: 17px; font-weight: 600; }
+.chat-room-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #0f0f11; }
+.msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-break: break-word; }
+.msg-bubble.me { background: #07c160; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg-bubble.friend { background: #2c2c2e; color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; }
+
+/* File & Image Attachments */
+.attach-btn { font-size: 22px; color: #07c160; padding: 0 6px; }
+.msg-bubble.image-bubble { padding: 4px; background: transparent; border: none; }
+.msg-bubble.image-bubble img { max-width: 180px; max-height: 180px; border-radius: 12px; display: block; object-fit: cover; }
+.msg-bubble.file-bubble { display: flex; align-items: center; gap: 12px; background: #fff; color: #000; padding: 12px 16px; border-radius: 12px; }
+.msg-bubble.file-bubble.friend { background: #2c2c2e; color: #fff; }
+.file-icon { font-size: 28px; }
+.file-info { display: flex; flex-direction: column; }
+.file-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.file-size { font-size: 11px; color: #888; margin-top: 2px; }
+
+.chat-room-input { padding: 12px 16px; background: #1c1c1e; display: flex; gap: 8px; border-top: 1px solid #2c2c2e; padding-bottom: 30px; align-items: center; }
+.chat-room-input input[type="text"] { flex: 1; height: 40px; border-radius: 20px; background: #2c2c2e; color: #fff; padding: 0 16px; font-size: 15px; }
+.chat-room-input button#crSendBtn { width: 40px; height: 40px; border-radius: 50%; background: #07c160; color: #fff; display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+
+/* ===================== App Store ===================== */
+.appstore-app { background: #000; }
+.store-section-title { font-size: 20px; font-weight: 700; margin-bottom: 14px; margin-top: 10px; }
+.store-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px; }
+.store-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: #1c1c1e; border-radius: 14px; }
+.store-icon { width: 56px; height: 56px; border-radius: 12px; display: grid; place-items: center; font-size: 28px; }
+.store-info { flex: 1; }
+.store-name { font-size: 16px; font-weight: 600; }
+.store-desc { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+.store-btn { padding: 6px 16px; border-radius: 16px; background: #0a84ff; color: #fff; font-size: 14px; font-weight: 600; }
+.store-btn.downloaded { background: #2c2c2e; color: #fff; }
+
+/* ===================== YouTube ===================== */
+.youtube-app { background: #0f0f11; padding: 0; }
+.yt-header { padding: 14px 16px; font-size: 20px; font-weight: 700; color: #ff0000; display: flex; align-items: center; gap: 8px; }
+.yt-video-box { width: 100%; aspect-ratio: 16/9; background: #1c1c1e; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.yt-thumb { width: 100%; height: 100%; background: linear-gradient(45deg, #ff9a9e, #fecfef); display: flex; align-items: center; justify-content: center; }
+.yt-play-btn { width: 60px; height: 60px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: grid; place-items: center; font-size: 24px; }
+.yt-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: #ff0000; width: 0%; transition: width .2s linear; }
+.yt-info { padding: 16px; }
+.yt-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.yt-author { font-size: 13px; color: #8e8e93; }
+
+/* ===================== Roblox ===================== */
+.roblox-app { background: #232527; align-items: center; justify-content: center; }
+.game-container { text-align: center; }
+.game-title { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+.game-score { font-size: 18px; color: #b0b0b0; margin-bottom: 30px; }
+.game-block { width: 120px; height: 120px; background: linear-gradient(135deg, #e62b2a, #ff6b6b); border-radius: 20px; display: grid; place-items: center; font-size: 40px; color: #fff; margin: 0 auto 30px; box-shadow: 0 10px 0 #9e1b1a; transition: transform .1s; }
+.game-block:active { transform: translateY(10px); box-shadow: 0 0 0 #9e1b1a; }
+.game-sub { font-size: 14px; color: #8e8e93; }
+
+/* ===================== Social Placeholder ===================== */
+.social-app { background: #f0f2f5; color: #000; padding-top: 54px; }
+.social-app .app-header { color: #1877F2; margin-bottom: 10px; }
+.post-card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.post-avatar { width: 40px; height: 40px; border-radius: 50%; background: #ccc; display: grid; place-items: center; font-size: 20px; }
+.post-name { font-size: 15px; font-weight: 600; }
+.post-text { font-size: 15px; margin-bottom: 12px; }
+.post-img { width: 100%; height: 180px; background: #e4e6eb; border-radius: 8px; display: grid; place-items: center; font-size: 40px; color: #888; }
+
+.ig-app { background: #fff; color: #000; padding-top: 54px; }
+.ig-app .app-header { color: #000; margin-bottom: 10px; }
+.ig-post { margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
+.ig-header { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+.ig-avatar { width: 32px; height: 32px; border-radius: 50%; background: #ccc; display: grid; place-items: center; font-size: 16px; }
+.ig-name { font-size: 14px; font-weight: 600; }
+.ig-img { width: 100%; height: 250px; background: #e4e6eb; display: grid; place-items: center; font-size: 60px; color: #888; }
+
+/* ===================== Home Bar ===================== */
+.home-bar { position: absolute; bottom: 9px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.85); z-index: 55; }
+
+/* ===================== Responsive ===================== */
+@media (max-height: 920px) { .phone { transform: scale(.88); } }
+@media (max-height: 800px) { .phone { transform: scale(.76); } }
+@media (max-height: 700px) { .phone { transform: scale(.64); } }
+@media (max-width: 460px)  { .phone { transform: scale(.9); } }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="side-btn vol-up"></div>
+  <div class="side-btn vol-down"></div>
+  <div class="side-btn power" id="powerBtn"></div>
+
+  <div class="screen" id="screen">
+    <div class="wallpaper" id="wallpaper"></div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span id="statusTime">9:41</span>
+      <div class="status-icons">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="6" width="3" height="6" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M8 5.6c-1.6 0-3.1.6-4.2 1.7l1.35 1.35A4.1 4.1 0 0 1 8 7.5c1.1 0 2.1.4 2.85 1.15L12.2 7.3A5.95 5.95 0 0 0 8 5.6z"/><path d="M8 1.7c-2.7 0-5.2 1.05-7 2.85l1.35 1.35A8.1 8.1 0 0 1 8 3.6c2.15 0 4.15.85 5.65 2.3L15 4.55A9.95 9.95 0 0 0 8 1.7z"/></svg>
+        <div class="battery"><div class="battery-level"></div></div>
+      </div>
+    </div>
+
+    <div class="dynamic-island" id="island"><span id="islandText"></span></div>
+
+    <!-- Lock Screen -->
+    <div class="lock-screen" id="lockScreen">
+      <div class="lock-date" id="lockDate">October 30, Friday</div>
+      <div class="lock-time" id="lockTime">9:41</div>
+      <div class="lock-widgets">
+        <div class="lock-widget"><span class="emo">🌤️</span><div><b>24°</b><span>Beijing · Sunny</span></div></div>
+        <div class="lock-widget"><span class="emo">🔋</span><div><b>82%</b><span>Battery Good</span></div></div>
+      </div>
+      <div class="unlock-hint"><div class="arrow">︿</div><div>Swipe up to unlock</div></div>
+    </div>
+
+    <!-- Home Screen -->
+    <div class="home-screen" id="homeScreen">
+      <div class="app-grid" id="appGrid"></div>
+      <div class="page-dots"><span class="active"></span><span></span></div>
+      <div class="dock" id="dock"></div>
+    </div>
+
+    <!-- Weather App -->
+    <div class="app-view weather-app" id="app-weather">
+      <div class="w-header"><div class="w-city">Beijing</div><div class="w-temp">24°</div><div class="w-desc">Sunny</div></div>
+      <div class="w-card"><div class="w-card-title">Hourly Forecast</div><div class="w-hourly" id="wHourly"></div></div>
+      <div class="w-card"><div class="w-card-title">5-Day Forecast</div><div id="wDaily"></div></div>
+    </div>
+
+    <!-- Calculator -->
+    <div class="app-view calc-app" id="app-calculator">
+      <div class="calc-display"><div id="calcResult">0</div></div>
+      <div class="calc-keys" id="calcKeys">
+        <button class="ck fn" data-k="AC">AC</button><button class="ck fn" data-k="±">±</button><button class="ck fn" data-k="%">%</button><button class="ck op" data-k="÷">÷</button>
+        <button class="ck" data-k="7">7</button><button class="ck" data-k="8">8</button><button class="ck" data-k="9">9</button><button class="ck op" data-k="×">×</button>
+        <button class="ck" data-k="4">4</button><button class="ck" data-k="5">5</button><button class="ck" data-k="6">6</button><button class="ck op" data-k="-">−</button>
+        <button class="ck" data-k="1">1</button><button class="ck" data-k="2">2</button><button class="ck" data-k="3">3</button><button class="ck op" data-k="+">+</button>
+        <button class="ck zero" data-k="0">0</button><button class="ck" data-k=".">.</button><button class="ck op" data-k="=">=</button>
+      </div>
+    </div>
+
+    <!-- Clock -->
+    <div class="app-view clock-app" id="app-clock">
+      <div class="app-header">Clock</div>
+      <div class="clock-now" id="clockNow">9:41:00</div>
+      <div class="sw-time" id="swTime">00:00.00</div>
+      <div class="sw-buttons"><button class="sw-btn" id="swReset">Reset</button><button class="sw-btn green" id="swStart">Start</button></div>
+    </div>
+
+    <!-- Notes -->
+    <div class="app-view notes-app" id="app-notes">
+      <div class="app-header">Notes</div>
+      <div class="note-input"><input id="noteInput" placeholder="New note..."><button id="noteAdd">Add</button></div>
+      <div class="notes-list" id="notesList"></div>
+    </div>
+
+    <!-- Music -->
+    <div class="app-view music-app" id="app-music">
+      <div class="music-art" id="musicArt">🎧</div>
+      <div class="music-title">Sunny Day</div>
+      <div class="music-artist">Jay Chou</div>
+      <div class="music-progress"><div id="musicBar"></div></div>
+      <div class="music-times"><span id="musicCur">0:00</span><span>4:29</span></div>
+      <div class="music-controls"><button id="musicPrev">⏮</button><button id="musicPlay">▶</button><button id="musicNext">⏭</button></div>
+    </div>
+
+    <!-- Photos -->
+    <div class="app-view photos-app" id="app-photos"><div class="app-header">Photos</div><div class="photo-grid" id="photoGrid"></div></div>
+
+    <!-- Settings -->
+    <div class="app-view settings-app" id="app-settings">
+      <div class="app-header">Settings</div>
+      <div class="settings-group">
+        <div class="setting-row" id="rowWallpaper"><span>🖼️ Change Wallpaper</span><span class="chev">›</span></div>
+        <div class="setting-row" id="rowBattery"><span>🔋 Show Battery Percentage</span><div class="switch" id="swBattery"></div></div>
+        <div class="setting-row" id="rowLock"><span>🔒 Lock Screen</span><span class="chev">›</span></div>
+      </div>
+    </div>
+
+    <!-- Phone App -->
+    <div class="app-view phone-app" id="app-phone">
+      <div class="app-header">Phone</div>
+      <div class="phone-card">
+        <div style="font-size:14px; color:#8e8e93; margin-bottom:8px;">Your Phone Number</div>
+        <div class="p-num" id="myPhoneNumber">1234 5678</div>
+        <div style="font-size:12px; color:#636366; margin-top:12px;">Use this to register or log in to WeChat.</div>
+        <button class="p-btn" id="regenPhoneBtn">Generate New Number</button>
+      </div>
+    </div>
+
+    <!-- WeChat App -->
+    <div class="app-view wechat-app" id="app-wechat">
+      <div class="app-header">WeChat</div>
+      
+      <!-- Registration State -->
+      <div id="regState">
+        <div class="reg-container">
+          <input type="tel" id="regPhoneInput" placeholder="8-digit number" maxlength="8">
+          <button id="regBtn">Log In / Register</button>
+        </div>
+        <div class="reg-hint">Enter a unique 8-digit number.<br>To test with a friend, open this page in a new tab and register a different number!</div>
+      </div>
+
+      <!-- Main Chat List State -->
+      <div id="chatListState" style="display: none; flex-direction: column; height: 100%;">
+        <div class="chat-list-header">
+          <span class="acc-info" id="myNumDisplay"></span>
+          <button id="switchAccBtn">Switch Account</button>
+        </div>
+
+        <!-- New Friends Button -->
+        <div class="new-friends-btn" id="newFriendsBtn">
+          <div class="nf-left">
+            <div class="nf-icon">👋</div>
+            <div class="nf-title">New Friends</div>
+          </div>
+          <div class="nf-badge" id="reqBadge" style="display:none;">0</div>
+        </div>
+        
+        <!-- Add Friend -->
+        <div class="add-friend-bar">
+          <input type="tel" id="friendPhoneInput" placeholder="Add friend by 8-digit number..." maxlength="8">
+          <button id="addFriendBtn">Add</button>
+        </div>
+
+        <!-- Friends List -->
+        <div class="chat-items" id="chatItems"></div>
+      </div>
+
+      <!-- Friend Requests Screen -->
+      <div class="requests-screen" id="requestsScreen">
+        <div class="req-header">
+          <button id="backToChatListFromReq">‹</button>
+          <div style="font-size: 24px; font-weight: bold;">New Friends</div>
+        </div>
+        <div id="requestsList"></div>
+      </div>
+
+      <!-- Chat Room -->
+      <div class="chat-room" id="chatRoom">
+        <div class="chat-room-header">
+          <button id="backToChatList">‹</button>
+          <div class="cr-name" id="crName">Friend</div>
+        </div>
+        <div class="chat-room-messages" id="crMessages"></div>
+        <div class="chat-room-input">
+          <button class="attach-btn" id="btnImg">🖼️</button>
+          <button class="attach-btn" id="btnFile">📎</button>
+          <input type="text" id="crInput" placeholder="Message">
+          <button id="crSendBtn">↑</button>
+        </div>
+        <input type="file" id="fileInputImg" accept="image/*" style="display:none;">
+        <input type="file" id="fileInputDoc" accept="*/*" style="display:none;">
+      </div>
+    </div>
+
+    <!-- App Store -->
+    <div class="app-view appstore-app" id="app-appstore">
+      <div class="app-header">App Store</div>
+      <div class="store-section-title">Must-Have Apps</div>
+      <div class="store-list" id="storeList"></div>
+    </div>
+
+    <!-- YouTube -->
+    <div class="app-view youtube-app" id="app-youtube">
+      <div class="yt-header">▶ YouTube</div>
+      <div class="yt-video-box"><div class="yt-thumb" id="ytThumb"><div class="yt-play-btn" id="ytPlayBtn">▶</div></div><div class="yt-progress" id="ytProgress"></div></div>
+      <div class="yt-info"><div class="yt-title">Relaxing Lofi Beats</div><div class="yt-author">Lofi Girl · 1.2M views</div></div>
+    </div>
+
+    <!-- Roblox -->
+    <div class="app-view roblox-app" id="app-roblox">
+      <div class="game-container">
+        <div class="game-title">Bloxy Clicker</div>
+        <div class="game-score" id="gameScore">Score: 0</div>
+        <div class="game-block" id="gameBlock">🧱</div>
+        <div class="game-sub">Tap the block to score!</div>
+      </div>
+    </div>
+
+    <!-- Facebook -->
+    <div class="app-view social-app" id="app-facebook">
+      <div class="app-header">facebook</div>
+      <div class="post-card"><div class="post-header"><div class="post-avatar">👤</div><div class="post-name">Mark Zuckerberg</div></div><div class="post-text">Just downloaded the new iPhone Simulator! 🚀</div><div class="post-img">📸 Photo</div></div>
+    </div>
+
+    <!-- Instagram -->
+    <div class="app-view ig-app" id="app-instagram">
+      <div class="app-header">Instagram</div>
+      <div class="ig-post"><div class="ig-header"><div class="ig-avatar">👤</div><div class="ig-name">travel_addict</div></div><div class="ig-img">🏖️</div><div style="padding:10px 0; font-size:14px;"><span style="color:#ff3040;">❤️</span> 1,234 likes</div></div>
+    </div>
+
+    <div class="home-bar" id="homeBar"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. App Data & State
+   ============================================================ */
+let myRandomPhone = Math.floor(10000000 + Math.random() * 90000000).toString();
+
+const BASE_APPS = [
+  { id:'appstore', name:'App Store', icon:'🛍️', bg:'linear-gradient(160deg,#1cc8ee,#0f7c9e)' },
+  { id:'weather', name:'Weather', icon:'🌤️', bg:'linear-gradient(160deg,#4facfe,#00b8f2)' },
+  { id:'calculator', name:'Calculator', icon:'🧮', bg:'linear-gradient(160deg,#ffb03a,#ff7a00)' },
+  { id:'clock', name:'Clock', icon:'⏰', bg:'linear-gradient(160deg,#3a3a3c,#0a0a0a)' },
+  { id:'notes', name:'Notes', icon:'📝', bg:'linear-gradient(160deg,#ffe066,#f5b301)' },
+  { id:'music', name:'Music', icon:'🎵', bg:'linear-gradient(160deg,#ff5f6d,#ffc371)' },
+  { id:'photos', name:'Photos', icon:'🌈', bg:'linear-gradient(160deg,#f8f9fa,#c9d6e3)' },
+  { id:'settings', name:'Settings', icon:'⚙️', bg:'linear-gradient(160deg,#9aa4ad,#5c6b73)' },
+];
+
+const DOCK = [
+  { id:'phone', name:'Phone', icon:'📞', bg:'linear-gradient(160deg,#43e97b,#1fc26b)' },
+  { id:'safari', name:'Safari', icon:'🧭', bg:'linear-gradient(160deg,#4facfe,#00b8f2)' },
+  { id:'wechat', name:'WeChat', icon:'💬', bg:'linear-gradient(160deg,#07c160,#059c4c)' },
+  { id:'music', name:'Music', icon:'🎵', bg:'linear-gradient(160deg,#ff5f6d,#ffc371)' },
+];
+
+const STORE_APPS = [
+  { id:'youtube', name:'YouTube', icon:'▶️', bg:'#ff0000' },
+  { id:'roblox', name:'Roblox', icon:'🧱', bg:'#e62b2a' },
+  { id:'facebook', name:'Facebook', icon:'📘', bg:'#1877F2' },
+  { id:'instagram', name:'Instagram', icon:'📸', bg:'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' },
+];
+
+const WALLPAPERS = [
+  'linear-gradient(160deg,#1a1a2e 0%,#16213e 45%,#0f3460 100%)',
+  'linear-gradient(160deg,#0f2027 0%,#203a43 45%,#2c5364 100%)',
+  'linear-gradient(160deg,#42275a 0%,#734b6d 60%,#b06ab3 100%)',
+  'linear-gradient(160deg,#0b486b 0%,#f56217 100%)',
+  'linear-gradient(160deg,#232526 0%,#414345 100%)',
+];
+
+/* ============================================================
+   2. Global Utilities
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+let islandTimer;
+function toast(msg) {
+  $('islandText').textContent = msg;
+  $('island').classList.add('show');
+  clearTimeout(islandTimer);
+  islandTimer = setTimeout(() => $('island').classList.remove('show'), 1700);
+}
+function escapeHTML(str) {
+  return str.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ============================================================
+   3. Time
+   ============================================================ */
+function updateTime() {
+  const d = new Date();
+  const h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+  const h12 = h % 12 || 12;
+  $('statusTime').textContent = `${h12}:${pad(m)}`;
+  $('lockTime').textContent = `${h12}:${pad(m)}`;
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  $('lockDate').textContent = `${months[d.getMonth()]} ${d.getDate()}, ${days[d.getDay()]}`;
+  $('clockNow').textContent = `${pad(h12)}:${pad(m)}:${pad(s)}`;
+}
+updateTime(); setInterval(updateTime, 1000);
+
+/* ============================================================
+   4. Home Screen
+   ============================================================ */
+let downloadedApps = JSON.parse(localStorage.getItem('downloaded_apps')) || [];
+function renderHomeScreen() {
+  const activeApps = [...BASE_APPS];
+  downloadedApps.forEach(appId => {
+    const app = STORE_APPS.find(a => a.id === appId);
+    if (app) activeApps.push(app);
+  });
+  $('appGrid').innerHTML = activeApps.map(a => `
+    <div class="app-item" data-app="${a.id}">
+      <div class="app-icon" style="background:${a.bg}">${a.icon}</div>
+      <div class="app-label">${a.name}</div>
+    </div>
+  `).join('');
+}
+renderHomeScreen();
+$('dock').innerHTML = DOCK.map(a => `<div class="app-item" data-app="${a.id}"><div class="app-icon" style="background:${a.bg}">${a.icon}</div></div>`).join('');
+
+/* ============================================================
+   5. Lock Screen
+   ============================================================ */
+let locked = true;
+let ignoreClickUntil = 0;
+function unlock() { if (!locked) return; locked = false; $('lockScreen').classList.add('unlocked'); ignoreClickUntil = Date.now() + 450; }
+function lockScreen() { goHome(); locked = true; $('lockScreen').classList.remove('unlocked'); toast('Locked'); }
+function goHome() { document.querySelectorAll('.app-view.active').forEach(el => el.classList.remove('active')); $('homeScreen').classList.remove('hidden'); $('chatRoom').classList.remove('active'); }
+
+const lockEl = $('lockScreen');
+let lockStartY = null;
+lockEl.addEventListener('pointerdown', e => { lockStartY = e.clientY; });
+lockEl.addEventListener('pointerup', e => { if (lockStartY === null) return; const dy = e.clientY - lockStartY; lockStartY = null; if (dy < -40) unlock(); });
+lockEl.addEventListener('click', () => unlock());
+$('powerBtn').addEventListener('click', () => locked ? unlock() : lockScreen());
+$('homeBar').addEventListener('click', goHome);
+
+$('screen').addEventListener('click', e => {
+  if (Date.now() < ignoreClickUntil) return;
+  const item = e.target.closest('[data-app]');
+  if (!item) return;
+  openApp(item.dataset.app);
+});
+
+function openApp(id) {
+  const view = $('app-' + id);
+  if (!view) { toast('Not available'); return; }
+  $('homeScreen').classList.add('hidden');
+  view.classList.add('active');
+  if (id === 'calculator') updateCalcDisplay();
+  if (id === 'wechat') renderWeChat();
+  if (id === 'phone') updatePhoneApp();
+  if (id === 'appstore') renderStore();
+}
+
+/* ============================================================
+   6. Calculator
+   ============================================================ */
+const calcState = { display: '0', first: null, op: null, waiting: false };
+function updateCalcDisplay() {
+  const s = calcState; let text = s.display;
+  if (text !== 'Error') {
+    const neg = text.startsWith('-'); let body = neg ? text.slice(1) : text;
+    const [intPart, decPart] = body.split('.');
+    text = (neg ? '-' : '') + intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (decPart !== undefined ? '.' + decPart : '');
+  }
+  $('calcResult').textContent = text;
+  $('calcResult').style.fontSize = text.length > 9 ? '44px' : text.length > 6 ? '56px' : '72px';
+}
+function compute(a, b, op) {
+  let r; switch (op) { case '+': r = a + b; break; case '-': r = a - b; break; case '×': r = a * b; break; case '÷': r = b === 0 ? NaN : a / b; break; default: r = b; }
+  return (!isFinite(r) || isNaN(r)) ? 'Error' : String(Math.round(r * 1e10) / 1e10);
+}
+function calcKey(k) {
+  const s = calcState;
+  if (s.display === 'Error' && /[0-9.]/.test(k)) { s.display = '0'; s.first = null; s.op = null; s.waiting = false; }
+  if (k >= '0' && k <= '9') { if (s.waiting) { s.display = k; s.waiting = false; } else { s.display = s.display === '0' ? k : s.display + k; } }
+  else if (k === '.') { if (s.waiting) { s.display = '0.'; s.waiting = false; } else if (!s.display.includes('.')) s.display += '.'; }
+  else if (k === 'AC') { s.display = '0'; s.first = null; s.op = null; s.waiting = false; }
+  else if (k === '±') { s.display = s.display.startsWith('-') ? s.display.slice(1) : (s.display === '0' ? '0' : '-' + s.display); }
+  else if (k === '%') { s.display = String(parseFloat(s.display) / 100); }
+  else if (['+', '-', '×', '÷'].includes(k)) { if (s.op && !s.waiting) { const r = compute(s.first, parseFloat(s.display), s.op); s.display = r; s.first = parseFloat(r); } else { s.first = parseFloat(s.display); } s.op = k; s.waiting = true; }
+  else if (k === '=') { if (s.op !== null) { const r = compute(s.first, parseFloat(s.display), s.op); s.display = r; s.first = null; s.op = null; s.waiting = true; } }
+  updateCalcDisplay();
+}
+$('calcKeys').addEventListener('click', e => { const btn = e.target.closest('[data-k]'); if (btn) calcKey(btn.dataset.k); });
+
+/* ============================================================
+   7. Clock / Stopwatch
+   ============================================================ */
+let swRunning = false, swStartTs = 0, swElapsed = 0, swRAF = null;
+function swTick() { const now = swElapsed + (swRunning ? performance.now() - swStartTs : 0); const m = Math.floor(now / 60000), s = Math.floor((now % 60000) / 1000), cs = Math.floor((now % 1000) / 10); $('swTime').textContent = `${pad(m)}:${pad(s)}.${pad(cs)}`; if (swRunning) swRAF = requestAnimationFrame(swTick); }
+$('swStart').addEventListener('click', () => {
+  const btn = $('swStart');
+  if (!swRunning) { swRunning = true; swStartTs = performance.now(); btn.textContent = 'Stop'; btn.classList.replace('green', 'red'); swTick(); }
+  else { swRunning = false; swElapsed += performance.now() - swStartTs; cancelAnimationFrame(swRAF); btn.textContent = 'Start'; btn.classList.replace('red', 'green'); }
+});
+$('swReset').addEventListener('click', () => { if (swRunning) return; swElapsed = 0; $('swTime').textContent = '00:00.00'; });
+
+/* ============================================================
+   8. Weather, Notes, Music, Photos, Settings
+   ============================================================ */
+const hours = [['Now','☀️',24], ['1 PM','☀️',25], ['2 PM','⛅',26], ['3 PM','⛅',26], ['4 PM','🌤️',25], ['5 PM','🌤️',23], ['6 PM','🌙',21], ['7 PM','🌙',20]];
+$('wHourly').innerHTML = hours.map(([t, e, v]) => `<div class="w-hour"><span>${t}</span><span class="h-emo">${e}</span><span>${v}°</span></div>`).join('');
+const days = [['Today','☀️',18,28], ['Wed','⛅',17,26], ['Thu','🌧️',16,22], ['Fri','🌤️',17,25], ['Sat','☀️',19,29]];
+$('wDaily').innerHTML = days.map(([n, e, lo, hi]) => `<div class="w-day"><span class="d-name">${n}</span><span>${e}</span><span>${lo}°</span><div class="d-bar"><i style="width:${((hi-14)/18*100)}%"></i></div><span>${hi}°</span></div>`).join('');
+
+let notes = ['Welcome to iPhone Simulator 👋'];
+function renderNotes() { $('notesList').innerHTML = notes.length ? notes.map((n, i) => `<div class="note-item"><span class="n-text">${escapeHTML(n)}</span><button class="n-del" data-i="${i}">✕</button></div>`).join('') : '<div style="text-align:center; color:#666; padding:20px;">No notes</div>'; }
+$('noteAdd').addEventListener('click', () => { const v = $('noteInput').value.trim(); if (!v) return; notes.unshift(v); $('noteInput').value = ''; renderNotes(); toast('Note added'); });
+$('notesList').addEventListener('click', e => { const btn = e.target.closest('.n-del'); if (btn) { notes.splice(btn.dataset.i, 1); renderNotes(); } });
+renderNotes();
+
+const MUSIC_LEN = 269; let musicPlaying = false, musicPos = 0, musicTimer = null;
+function renderMusic() { $('musicBar').style.width = (musicPos / MUSIC_LEN * 100) + '%'; $('musicCur').textContent = `${Math.floor(musicPos/60)}:${pad(Math.floor(musicPos%60))}`; }
+$('musicPlay').addEventListener('click', () => { musicPlaying = !musicPlaying; $('musicPlay').textContent = musicPlaying ? '⏸' : '▶'; if (musicPlaying) { musicTimer = setInterval(() => { musicPos = (musicPos + 0.12) % MUSIC_LEN; renderMusic(); }, 120); } else clearInterval(musicTimer); });
+$('musicNext').addEventListener('click', () => { musicPos = 0; renderMusic(); }); $('musicPrev').addEventListener('click', () => { musicPos = 0; renderMusic(); });
+renderMusic();
+
+const GRADS = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#30cfd0','#a8edea','#ff9a9e','#ffecd2'];
+$('photoGrid').innerHTML = GRADS.map(g => `<div style="background:${g}"></div>`).join('');
+
+let wpIndex = 0;
+$('rowWallpaper').addEventListener('click', () => { wpIndex = (wpIndex + 1) % WALLPAPERS.length; $('wallpaper').style.background = WALLPAPERS[wpIndex]; toast('Wallpaper changed'); });
+$('rowLock').addEventListener('click', lockScreen);
+
+function updatePhoneApp() { $('myPhoneNumber').textContent = myRandomPhone.replace(/(\d{4})(\d{4})/, '$1 $2'); }
+$('regenPhoneBtn').addEventListener('click', () => { myRandomPhone = Math.floor(10000000 + Math.random() * 90000000).toString(); updatePhoneApp(); toast('New number generated!'); });
+
+/* ============================================================
+   9. WeChat App (Real-time sync + Friend Requests)
+   ============================================================ */
+// Database structure
+let globalUsers = JSON.parse(localStorage.getItem('wechat_users')) || {}; 
+// { "11111111": { friends: ["22222222"], requests: ["33333333"] } }
+let globalMessages = JSON.parse(localStorage.getItem('wechat_messages')) || {}; 
+// { "11111111_22222222": [ { sender: "11111111", text: "hi", type: "text" } ] }
+
+let currentUser = sessionStorage.getItem('wechat_current_user') || null; 
+let currentChatId = null;
+
+function saveDB() {
+  localStorage.setItem('wechat_users', JSON.stringify(globalUsers));
+  localStorage.setItem('wechat_messages', JSON.stringify(globalMessages));
+}
+
+function ensureUser(phone) {
+  if (!globalUsers[phone]) {
+    globalUsers[phone] = { friends: [], requests: [] };
+    saveDB();
+  }
+}
+
+function renderWeChat() {
+  if (!currentUser) {
+    $('regState').style.display = 'block';
+    $('chatListState').style.display = 'none';
+    $('requestsScreen').classList.remove('active');
+  } else {
+    $('regState').style.display = 'none';
+    $('chatListState').style.display = 'flex';
+    $('myNumDisplay').textContent = `Logged in: ${currentUser}`;
+    renderChatList();
+    updateRequestsBadge();
+  }
+}
+
+function updateRequestsBadge() {
+  ensureUser(currentUser);
+  const reqs = globalUsers[currentUser].requests;
+  const badge = $('reqBadge');
+  if (reqs.length > 0) {
+    badge.textContent = reqs.length;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderChatList() {
+  ensureUser(currentUser);
+  const friends = globalUsers[currentUser].friends;
+  const container = $('chatItems');
+  
+  if (friends.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: #8e8e93; font-size: 14px; margin-top: 20px;">No friends yet. Add a friend!</div>';
+    return;
+  }
+  
+  container.innerHTML = friends.map(f => {
+    const chatId = [currentUser, f].sort().join('_');
+    const msgs = globalMessages[chatId] || [];
+    let preview = "Start a conversation...";
+    if (msgs.length > 0) {
+      const last = msgs[msgs.length - 1];
+      preview = last.type === 'image' ? '[Image]' : last.type === 'file' ? '[File]' : last.text;
+    }
+    
+    return `
+      <div class="chat-item">
+        <div class="chat-avatar" onclick="openChat('${f}')">👤</div>
+        <div class="chat-info" onclick="openChat('${f}')">
+          <div class="chat-name">${f.replace(/(\d{4})(\d{4})/, '$1 $2')}</div>
+          <div class="chat-preview">${escapeHTML(preview)}</div>
+        </div>
+        <div class="delete-friend-btn" onclick="deleteFriend('${f}')">🗑️</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Auth
+$('regBtn').addEventListener('click', () => {
+  const phone = $('regPhoneInput').value.trim();
+  if (!/^\d{8}$/.test(phone)) { toast('Must be exactly 8 digits'); return; }
+  currentUser = phone;
+  sessionStorage.setItem('wechat_current_user', currentUser);
+  ensureUser(currentUser);
+  renderWeChat();
+  toast('Logged in successfully');
+});
+
+$('switchAccBtn').addEventListener('click', () => {
+  currentUser = null;
+  sessionStorage.removeItem('wechat_current_user');
+  $('regPhoneInput').value = '';
+  renderWeChat();
+});
+
+// Add Friend (Sends Request)
+$('addFriendBtn').addEventListener('click', () => {
+  const target = $('friendPhoneInput').value.trim();
+  if (!/^\d{8}$/.test(target)) { toast('Must be exactly 8 digits'); return; }
+  if (target === currentUser) { toast('Cannot add yourself'); return; }
+  
+  ensureUser(target);
+  
+  if (globalUsers[currentUser].friends.includes(target)) { toast('Already friends'); return; }
+  if (globalUsers[currentUser].requests.includes(target)) { toast('Request already sent'); return; }
+  if (globalUsers[target].requests.includes(currentUser)) {
+    toast('This user already sent you a request! Check New Friends.');
+    return;
+  }
+  
+  // Send request
+  globalUsers[target].requests.push(currentUser);
+  saveDB();
+  $('friendPhoneInput').value = '';
+  toast('Request sent!');
+});
+
+// Delete Friend
+window.deleteFriend = function(friendPhone) {
+  if (!confirm('Delete this friend?')) return;
+  ensureUser(currentUser);
+  ensureUser(friendPhone);
+  
+  globalUsers[currentUser].friends = globalUsers[currentUser].friends.filter(f => f !== friendPhone);
+  globalUsers[friendPhone].friends = globalUsers[friendPhone].friends.filter(f => f !== currentUser);
+  
+  saveDB();
+  renderChatList();
+  toast('Friend deleted');
+};
+
+// Friend Requests UI
+$('newFriendsBtn').addEventListener('click', () => {
+  $('requestsScreen').classList.add('active');
+  renderRequests();
+});
+$('backToChatListFromReq').addEventListener('click', () => {
+  $('requestsScreen').classList.remove('active');
+});
+
+function renderRequests() {
+  ensureUser(currentUser);
+  const reqs = globalUsers[currentUser].requests;
+  const container = $('requestsList');
+  
+  if (reqs.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: #8e8e93; font-size: 14px; margin-top: 20px;">No pending requests.</div>';
+    return;
+  }
+  
+  container.innerHTML = reqs.map(reqPhone => `
+    <div class="req-item">
+      <div class="req-info">
+        <div class="req-avatar">👤</div>
+        <div class="req-name">${reqPhone.replace(/(\d{4})(\d{4})/, '$1 $2')}</div>
+      </div>
+      <div class="req-actions">
+        <button class="btn-accept" onclick="acceptRequest('${reqPhone}')">Accept</button>
+        <button class="btn-decline" onclick="declineRequest('${reqPhone}')">Decline</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.acceptRequest = function(reqPhone) {
+  ensureUser(reqPhone);
+  // Move to friends
+  if (!globalUsers[currentUser].friends.includes(reqPhone)) globalUsers[currentUser].friends.push(reqPhone);
+  if (!globalUsers[reqPhone].friends.includes(currentUser)) globalUsers[reqPhone].friends.push(currentUser);
+  
+  // Remove from requests
+  globalUsers[currentUser].requests = globalUsers[currentUser].requests.filter(r => r !== reqPhone);
+  
+  saveDB();
+  renderRequests();
+  updateRequestsBadge();
+  renderChatList();
+  toast('Friend accepted');
+};
+
+window.declineRequest = function(reqPhone) {
+  globalUsers[currentUser].requests = globalUsers[currentUser].requests.filter(r => r !== reqPhone);
+  saveDB();
+  renderRequests();
+  updateRequestsBadge();
+  toast('Request declined');
+};
+
+// Chat Room
+window.openChat = function(friendPhone) {
+  currentChatId = [currentUser, friendPhone].sort().join('_');
+  $('crName').textContent = friendPhone.replace(/(\d{4})(\d{4})/, '$1 $2');
+  renderMessages();
+  $('chatRoom').classList.add('active');
+};
+
+$('backToChatList').addEventListener('click', () => {
+  $('chatRoom').classList.remove('active');
+  currentChatId = null;
+  renderChatList();
+});
+
+function renderMessages() {
+  if (!currentChatId) return;
+  const msgs = globalMessages[currentChatId] || [];
+  const container = $('crMessages');
+  
+  container.innerHTML = msgs.map(m => {
+    const senderClass = m.sender === currentUser ? 'me' : 'friend';
+    if (m.type === 'image') {
+      return `<div class="msg-bubble image-bubble ${senderClass}"><img src="${m.content}"></div>`;
+    } else if (m.type === 'file') {
+      return `<div class="msg-bubble file-bubble ${senderClass}">
+                <div class="file-icon">📄</div>
+                <div class="file-info">
+                  <div class="file-name">${escapeHTML(m.content)}</div>
+                  <div class="file-size">${m.size}</div>
+                </div>
+              </div>`;
+    } else {
+      return `<div class="msg-bubble ${senderClass}">${escapeHTML(m.text)}</div>`;
+    }
+  }).join('');
+  
+  container.scrollTop = container.scrollHeight;
+}
+
+// Send Message
+function sendMessage() {
+  const text = $('crInput').value.trim();
+  if (!text || !currentChatId) return;
+  
+  if (!globalMessages[currentChatId]) globalMessages[currentChatId] = [];
+  globalMessages[currentChatId].push({ sender: currentUser, type: 'text', text });
+  saveDB();
+  
+  $('crInput').value = '';
+  renderMessages();
+}
+$('crSendBtn').addEventListener('click', sendMessage);
+$('crInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+// Send Image
+$('btnImg').addEventListener('click', () => $('fileInputImg').click());
+$('fileInputImg').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { toast('Image too large (max 2MB)'); return; }
+  
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    if (!globalMessages[currentChatId]) globalMessages[currentChatId] = [];
+    globalMessages[currentChatId].push({ sender: currentUser, type: 'image', content: ev.target.result });
+    saveDB();
+    renderMessages();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+// Send File
+$('btnFile').addEventListener('click', () => $('fileInputDoc').click());
+$('fileInputDoc').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+  if (!globalMessages[currentChatId]) globalMessages[currentChatId] = [];
+  globalMessages[currentChatId].push({ sender: currentUser, type: 'file', content: file.name, size: sizeMB + ' MB' });
+  saveDB();
+  renderMessages();
+  e.target.value = '';
+});
+
+/* ============================================================
+   10. Real-Time Sync (Cross-Tab)
+   ============================================================ */
+window.addEventListener('storage', (e) => {
+  if (e.key === 'wechat_users' || e.key === 'wechat_messages') {
+    // Reload DB
+    globalUsers = JSON.parse(localStorage.getItem('wechat_users')) || {};
+    globalMessages = JSON.parse(localStorage.getItem('wechat_messages')) || {};
+    
+    if ($('app-wechat').classList.contains('active')) {
+      if ($('chatRoom').classList.contains('active')) {
+        renderMessages(); // Update current chat
+      } else if ($('requestsScreen').classList.contains('active')) {
+        renderRequests(); // Update requests screen
+      } else {
+        renderChatList(); // Update main list
+      }
+      updateRequestsBadge();
+    }
+  }
+});
+
+/* ============================================================
+   11. App Store, YouTube, Roblox
+   ============================================================ */
+function renderStore() {
+  $('storeList').innerHTML = STORE_APPS.map(app => {
+    const isDownloaded = downloadedApps.includes(app.id);
+    return `
+      <div class="store-item">
+        <div class="store-icon" style="background:${app.bg}">${app.icon}</div>
+        <div class="store-info">
+          <div class="store-name">${app.name}</div>
+          <div class="store-desc">${app.id === 'youtube' ? 'Watch Videos' : app.id === 'roblox' ? 'Play Games' : 'Social Network'}</div>
+        </div>
+        <button class="store-btn ${isDownloaded ? 'downloaded' : ''}" onclick="downloadApp('${app.id}')">
+          ${isDownloaded ? 'OPEN' : 'GET'}
+        </button>
+      </div>`;
+  }).join('');
+}
+
+window.downloadApp = function(id) {
+  if (downloadedApps.includes(id)) { openApp(id); return; }
+  toast('Downloading...');
+  setTimeout(() => {
+    downloadedApps.push(id);
+    localStorage.setItem('downloaded_apps', JSON.stringify(downloadedApps));
+    renderHomeScreen();
+    renderStore();
+    toast('App Installed!');
+  }, 1000);
+};
+
+let ytPlaying = false, ytProgress = 0, ytTimer = null;
+$('ytPlayBtn').addEventListener('click', () => {
+  ytPlaying = !ytPlaying;
+  $('ytPlayBtn').textContent = ytPlaying ? '⏸' : '▶';
+  if (ytPlaying) {
+    $('ytThumb').style.filter = 'brightness(0.5)';
+    ytTimer = setInterval(() => {
+      ytProgress += 0.5;
+      if (ytProgress >= 100) { ytProgress = 0; clearInterval(ytTimer); ytPlaying = false; $('ytPlayBtn').textContent = '▶'; $('ytThumb').style.filter = 'none'; }
+      $('ytProgress').style.width = ytProgress + '%';
+    }, 200);
+  } else { clearInterval(ytTimer); $('ytThumb').style.filter = 'none'; }
+});
+
+let robloxScore = 0;
+$('gameBlock').addEventListener('click', () => {
+  robloxScore++;
+  $('gameScore').textContent = `Score: ${robloxScore}`;
+  const block = $('gameBlock');
+  block.style.transform = 'scale(0.9)';
+  setTimeout(() => block.style.transform = 'scale(1)', 100);
+});
+
+/* ============================================================
+   12. Startup
+   ============================================================ */
+(function () {
+  const d = new Date();
+  const pct = 76 + (d.getMinutes() % 12);
+  document.querySelector('.battery-level').style.width = pct + '%';
+})();
+</script>
+</body>
+</html>
